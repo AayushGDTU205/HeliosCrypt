@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environmental Task Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .image-upload {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            margin-top: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Environmental Task Verification</h1>
+    
+    <div class="container">
+        <div class="image-upload">
+            <h2>Before Image</h2>
+            <input type="file" id="beforeImage" accept="image/*">
+            <img id="beforePreview" class="image-preview">
+            
+            <label for="beforeLat">Latitude:</label>
+            <input type="number" id="beforeLat" step="0.000001" placeholder="e.g. 28.684629">
+            
+            <label for="beforeLng">Longitude:</label>
+            <input type="number" id="beforeLng" step="0.000001" placeholder="e.g. 77.208069">
+        </div>
+        
+        <div class="image-upload">
+            <h2>After Image</h2>
+            <input type="file" id="afterImage" accept="image/*">
+            <img id="afterPreview" class="image-preview">
+            
+            <label for="afterLat">Latitude:</label>
+            <input type="number" id="afterLat" step="0.000001" placeholder="e.g. 28.686425">
+            
+            <label for="afterLng">Longitude:</label>
+            <input type="number" id="afterLng" step="0.000001" placeholder="e.g. 77.210112">
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <label for="taskType">Task Type (Optional):</label>
+        <select id="taskType">
+            <option value="">Auto-detect</option>
+            <option value="trash_cleanup">Trash Cleanup</option>
+            <option value="afforestation">Afforestation</option>
+            <option value="water_body_cleaning">Water Body Cleaning</option>
+        </select>
+    </div>
+    
+    <button id="verifyBtn" style="margin-top: 20px;">Verify Environmental Task</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        // Preview images when selected
+        document.getElementById('beforeImage').addEventListener('change', function(e) {
+            previewImage(e.target, 'beforePreview');
+        });
+        
+        document.getElementById('afterImage').addEventListener('change', function(e) {
+            previewImage(e.target, 'afterPreview');
+        });
+        
+        // Handle verification button click
+        document.getElementById('verifyBtn').addEventListener('click', verifyTask);
+        
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        async function verifyTask() {
+            const beforeImage = document.getElementById('beforeImage').files[0];
+            const afterImage = document.getElementById('afterImage').files[0];
+            
+            const beforeLat = parseFloat(document.getElementById('beforeLat').value);
+            const beforeLng = parseFloat(document.getElementById('beforeLng').value);
+            const afterLat = parseFloat(document.getElementById('afterLat').value);
+            const afterLng = parseFloat(document.getElementById('afterLng').value);
+            
+            const taskType = document.getElementById('taskType').value || null;
+            const resultDiv = document.getElementById('result');
+            
+            // Validation
+            if (!beforeImage || !afterImage) {
+                alert('Please select both before and after images');
+                return;
+            }
+            
+            if (isNaN(beforeLat) || isNaN(beforeLng) || isNaN(afterLat) || isNaN(afterLng)) {
+                alert('Please enter valid coordinates for both locations');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('verifyBtn').disabled = true;
+            document.getElementById('verifyBtn').textContent = 'Verifying...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                // Convert images to base64
+                const beforeImageB64 = await fileToBase64(beforeImage);
+                const afterImageB64 = await fileToBase64(afterImage);
+                
+                // Prepare request data
+                const requestData = {
+                    images: {
+                        before: beforeImageB64,
+                        after: afterImageB64
+                    },
+                    coordinates: {
+                        before: [beforeLat, beforeLng],
+                        after: [afterLat, afterLng]
+                    }
+                };
+                
+                if (taskType) {
+                    requestData.task_type = taskType;
+                }
+                
+                // Make API request
+                const response = await fetch('http://localhost:5000/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                // Display result
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.textContent = 'Error: ' + error.message;
+                resultDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                document.getElementById('verifyBtn').disabled = false;
+                document.getElementById('verifyBtn').textContent = 'Verify Environmental Task';
+            }
+        }
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    // Extract the base64 part from the data URL
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>
