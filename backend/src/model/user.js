@@ -25,6 +25,10 @@ const userSchema = new Schema({
         type: String,
         required: true
     },
+    walletAddress: {
+        type: String,
+        required:false
+    },
     profilePicture: {
         type: String
     },

@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import loginRouter from "./routes/loginRouter.js";
+import userRouter from "./routes/userRouter.js";
 import dotenv from 'dotenv';
 dotenv.config();
 import { verifyJWT } from "./middleware/verifyJWT.js";
@@ -21,6 +22,7 @@ app.use(express.static('public'));
 app.use(cookieParser());
 
 app.use('/', loginRouter);
+app.use('/user', userRouter);
 app.get('/test', verifyJWT, async(req,res,next) => {
     res.status(200).json({
         message:"succesful verification"
