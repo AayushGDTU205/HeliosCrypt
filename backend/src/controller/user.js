@@ -1,6 +1,7 @@
 import { ResponseHandler } from "../utils/responseHandler.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import User from "../model/user.js";
+import axios from "axios";
 import sharp from "sharp";
 
 export const postBeforeAfter = ResponseHandler(async (req, res, next) => {
@@ -22,8 +23,32 @@ export const postBeforeAfter = ResponseHandler(async (req, res, next) => {
     try {
         const image1Buffer = await sharp(image1[0].buffer).jpeg().toBuffer();
         const image2Buffer = await sharp(image2[0].buffer).jpeg().toBuffer();
-        console.log(image1Buffer);
-        console.log(image2Buffer);
+        
+        if (!image1Buffer || !image2Buffer) {
+            throw new ErrorHandler('image processing error try reuploading images', 400);
+        }
+        const base64_1 = image1Buffer.toString('base64');
+        const image1B64 = `data:image/jpeg;base64,${base64_1}`;
+        const base64_2 = image2Buffer.toString('base64');
+        const image2B64=`data:image/jpeg;base64,${base64_2}`;
+        const data = {
+            images: {
+                before: image1B64,
+                after: image2B64
+            },
+            coordinates: {
+                before: [+lat1, +long1],
+                after: [+lat2, +long2]
+            }
+        }; 
+        const dataForPy = JSON.stringify(data);
+        //making API call to python
+        let PyResponse = await axios.post('http://127.0.0.1:5000/api/verify', dataForPy, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+        console.log(PyResponse.data);
         return res.status(200).json({
             message: "received data successfully"
         })
