@@ -8,8 +8,7 @@ import io
 from PIL import Image
 from typing import List, Tuple, Dict, Any, Optional
 
-# Import your verification module
-from verification import verify_environmental_task, calculate_distance
+from verification import verify_environmental_task, calculate_distance #local code.
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -118,8 +117,6 @@ def decode_base64_to_image(base64_str: str) -> Image.Image:
     return image
 
 if __name__ == '__main__':
-    # Get port from environment variable or use default
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5000)) # we're running this on port number 5000.
     
-    # Start the Flask app
     app.run(host='0.0.0.0', port=port, debug=False)
